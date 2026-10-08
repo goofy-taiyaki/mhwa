@@ -18,7 +18,7 @@
     <section class="input-panel" aria-label="参照画像とレシピ情報">
       <div class="reference"><img id="reference-preview" alt="解析対象の参照画像" hidden /><div><span class="eyebrow">REFERENCE</span><p id="image-info">参照画像は未選択</p><label class="button secondary small">画像を選ぶ<input id="image" type="file" accept="image/jpeg,image/png,image/webp" /></label><button id="crop-image" class="secondary small" hidden>顔の周囲を切り抜く</button><button id="clear-image" class="text-button" hidden>画像を外す</button></div></div>
       <div class="metadata"><label>レシピ名<input id="title" type="text" maxlength="160" value="新しいレシピ" /></label><label>ゲーム版<input id="game-version" type="text" maxlength="160" placeholder="未確認" /></label><label>ベース設定<input id="base" type="text" maxlength="160" placeholder="未指定" /></label></div>
-      <div class="inference-panel"><div><button id="infer" disabled>設定候補を作る</button><button id="cancel-inference" class="secondary" hidden>解析を中止</button></div><p id="inference-status" role="status" aria-live="polite">画像を選択してください。</p><p class="inference-scope">実験版：プリセット1を基準に、口・目の大きさを0・10・20から提案します。正面・無表情で顔全体が見える1人の画像を選んでください。実写での再現精度、顔の向き・遮蔽の自動判定は未検証です。</p></div>
+      <div class="inference-panel"><div><button id="infer" disabled>設定候補を作る</button><button id="cancel-inference" class="secondary" hidden>解析を中止</button></div><p id="inference-status" role="status" aria-live="polite">画像を選択してください。</p><p class="inference-scope">実験版：プリセット1を基準に、鼻の位置・目の大きさの組合せと、口の大きさを0・10・20から提案します。正面・無表情で顔全体が見える1人の画像を選んでください。3項目を同時に変更した外見、実写での再現精度、顔の向き・遮蔽の自動判定は未検証です。</p></div>
       <p class="privacy">画像は端末内で解析し、サーバーへ送信しません。初回解析時に解析用データを読み込みます。JSONに画像や顔の特徴点は含まれません。</p>
     </section>
     <div id="message" role="status" aria-live="polite"></div>
