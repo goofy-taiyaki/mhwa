@@ -302,7 +302,7 @@ element('infer').addEventListener('click',async()=>{
     recipe=next;dirty=true;generatedFromImageRequest=sourceRequest;currentPage=1;editing=false;
     element<HTMLInputElement>('editing').checked=false;syncMetadata();renderSheets();
     status.textContent='設定候補を作成しました。実写での再現精度は未検証です。';
-    notify('口・目の大きさの実験候補を表示しました。対応外の項目は未取得です。');
+    notify('測定済みの設定から実験候補を表示しました。対応外の項目は未取得です。');
   }catch(error){if(seq===inferenceSequence){status.textContent=(error as Error).message;notify('候補を作成できませんでした。設定表は変更していません。',true);}}
   finally{if(seq===inferenceSequence){inferenceAbort=null;inferenceControls(false);}}
 });

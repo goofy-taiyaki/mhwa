@@ -1,11 +1,11 @@
-import { distanceFeatures, rankMeasuredCandidates } from './measured-candidate-search.ts';
+import { distanceFeatures, parseMeasuredCatalog, rankMeasuredCandidates } from './measured-candidate-search.ts';
 import type { DistanceFeatureSpec } from './measured-candidate-search.ts';
 import { parseMeasuredPartsCatalog } from './measured-parts-search.ts';
 import { validateObservation } from './observation-comparison.ts';
-import { proposalBinding } from './proposal-contract.ts';
+import { PROPOSAL_BINDINGS, proposalBinding } from './proposal-contract.ts';
 
 export interface CompactCatalog {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   kind: 'compact_measured_parts';
   gameBuild: string; baseEvidence: string; captureConditions: string; limitations: string;
   engine: string; modelSha256: string; delegate: 'CPU' | 'GPU';
@@ -20,7 +20,7 @@ const text = (v: unknown, max=4000) => typeof v === 'string' && !!v.trim() && v.
 const index = (v: unknown): v is number => Number.isInteger(v) && Number(v)>=0 && Number(v)<478;
 export function parseCompactCatalog(value: unknown): CompactCatalog {
   exact(value,['schemaVersion','kind','gameBuild','baseEvidence','captureConditions','limitations','engine','modelSha256','delegate','parts']);
-  if(value.schemaVersion!==1 || value.kind!=='compact_measured_parts' ||
+  if((value.schemaVersion!==1 && value.schemaVersion!==2) || value.kind!=='compact_measured_parts' ||
     ![value.gameBuild,value.baseEvidence,value.engine].every(v=>text(v,160)) || ![value.captureConditions,value.limitations].every(v=>text(v)) ||
     typeof value.modelSha256!=='string' || !/^[a-f0-9]{64}$/.test(value.modelSha256) || !['CPU','GPU'].includes(String(value.delegate)) ||
     !Array.isArray(value.parts) || value.parts.length<1 || value.parts.length>3) throw Error('Invalid compact catalog');
@@ -33,29 +33,40 @@ export function parseCompactCatalog(value: unknown): CompactCatalog {
       !Array.isArray(pairs)||!pairs.length||pairs.length>478||pairs.some(pair=>!Array.isArray(pair)||pair.length!==2||pair.some(i=>!index(i)||a.includes(i))||pair[0]===pair[1])||
       new Set(pairs.map(pair=>[...pair].sort((x,y)=>x-y).join(':'))).size!==pairs.length)throw Error('Invalid compact feature selection');
     if(!Array.isArray(p.candidates)||p.candidates.length<2||p.candidates.length>21)throw Error('Invalid candidates');
-    const candidateIds=new Set<string>(),values=new Set<number>(); let label:string|undefined;
+    const candidateIds=new Set<string>(),values=new Set<string>(); let labels:string[]|undefined;
     for(const c of p.candidates){
       exact(c,['id','settings','sampleCount','centroid','trainingSpreadMax']);
-      if(!text(c.id,160)||candidateIds.has(String(c.id))||!object(c.settings)||Object.keys(c.settings).length!==1)throw Error('Invalid compact candidate');
+      if(!text(c.id,160)||candidateIds.has(String(c.id))||!object(c.settings))throw Error('Invalid compact candidate');
       candidateIds.add(String(c.id));
-      const [key,v]=Object.entries(c.settings)[0]; proposalBinding(key);
-      if((label&&label!==key)||typeof v!=='number'||!Number.isInteger(v)||v<0||v>20||values.has(v))throw Error('Invalid candidate setting');
-      label=key;values.add(v);
+      const entries=Object.entries(c.settings).sort(([a],[b])=>a.localeCompare(b));
+      const keys=entries.map(([key])=>key),signature=JSON.stringify(entries);
+      if(!entries.length||entries.length>(value.schemaVersion===1?1:PROPOSAL_BINDINGS.length)||
+        (labels&&JSON.stringify(labels)!==JSON.stringify(keys))||values.has(signature))throw Error('Invalid candidate setting');
+      for(const [key,v] of entries){
+        proposalBinding(key);
+        if(typeof v!=='number'||!Number.isInteger(v)||v<0||v>20)throw Error('Invalid candidate setting');
+      }
+      labels=keys;values.add(signature);
       if(!Number.isInteger(c.sampleCount)||Number(c.sampleCount)<2||!Array.isArray(c.centroid)||c.centroid.length!==pairs.length||c.centroid.some(n=>typeof n!=='number'||!Number.isFinite(n)||n<0)||
         typeof c.trainingSpreadMax!=='number'||!Number.isFinite(c.trainingSpreadMax)||c.trainingSpreadMax<0)throw Error('Invalid measured centroid');
     }
-    if(settings.has(label!))throw Error('Overlapping part settings');settings.add(label!);
+    for(const label of labels!){
+      if(settings.has(label))throw Error('Overlapping part settings');settings.add(label);
+    }
   }
   return structuredClone(value) as unknown as CompactCatalog;
 }
 
 /** Offline compression: retain only declared scope, feature specifications and measured centroids. */
 export function compileCompactCatalog(raw: unknown): CompactCatalog {
-  const c=parseMeasuredPartsCatalog(raw),ob=validateObservation(c.parts[0].candidates[0].observations[0]);
+  const c=(raw as {kind?:unknown})?.kind==='measured_candidate_catalog'?parseMeasuredCatalog(raw):parseMeasuredPartsCatalog(raw);
+  const parts=c.kind==='measured_candidate_catalog'?[{id:'joint',label:'測定済みの設定候補',features:c.features,candidates:c.candidates}]:c.parts;
+  const ob=validateObservation(parts[0].candidates[0].observations[0]);
   const {gameBuild,baseEvidence,captureConditions,limitations}=c;
-  return parseCompactCatalog({schemaVersion:1,kind:'compact_measured_parts',gameBuild,baseEvidence,captureConditions,limitations,
+  const schemaVersion=parts.some(p=>Object.keys(p.candidates[0].settings).length>1)?2:1;
+  return parseCompactCatalog({schemaVersion,kind:'compact_measured_parts',gameBuild,baseEvidence,captureConditions,limitations,
     engine:ob.engine,modelSha256:ob.modelSha256,delegate:ob.delegate,
-    parts:c.parts.map(p=>({id:p.id,label:p.label,features:p.features,candidates:rankMeasuredCandidates(ob,p.candidates,p.features).ranking.map(
+    parts:parts.map(p=>({id:p.id,label:p.label,features:p.features,candidates:rankMeasuredCandidates(ob,p.candidates,p.features).ranking.map(
       ({id,settings,sampleCount,centroid,trainingSpreadMax})=>({id,settings,sampleCount,centroid,trainingSpreadMax}))}))});
 }
 
