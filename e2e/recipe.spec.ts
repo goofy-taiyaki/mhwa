@@ -1,0 +1,64 @@
+import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+
+test('pages, column order, editing, JSON round trip, print and narrow layout', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'ハンターのレシピ', exact: true })).toBeVisible();
+  const sheet = page.locator('#sheet-1');
+  await expect(sheet.locator('.recipe-column')).toHaveCount(4);
+  expect(await sheet.locator('.recipe-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(4);
+  await expect(page.locator('[data-id="p1.c1.r1"] .value')).toHaveText('—');
+  await page.getByLabel('手動編集', { exact: true }).check();
+  await page.locator('[data-field="p1.c1.r1"]').fill('0');
+  await page.locator('[data-field="p1.c1.r1"]').press('Tab');
+  await page.locator('[data-field="p1.c2.r12"]').selectOption('false');
+  await page.getByLabel('レシピ名', { exact: true }).fill('往復検証');
+  const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'JSONを保存' }).click();
+  const saved = await download; const bytes = await readFile((await saved.path())!);
+  const recipe = JSON.parse(bytes.toString('utf8'));
+  expect(recipe.entries['p1.c1.r1'].value).toBe(0);
+  expect(recipe.entries['p1.c2.r12'].value).toBe(false);
+  expect(recipe.entries['p1.c1.r2'].value).toBeNull();
+  expect(recipe.title).toBe('往復検証');
+  await page.locator('#import').setInputFiles({ name: 'recipe.json', mimeType: 'application/json', buffer: bytes });
+  await expect(page.locator('#message')).toContainText('読み込みました');
+  await page.getByLabel('手動編集', { exact: true }).uncheck();
+  await expect(page.locator('[data-id="p1.c2.r12"] .value')).toHaveText('OFF');
+  await page.getByRole('button', { name: '02 目もと・鼻・口・ヒゲ' }).click();
+  await expect(page.locator('#sheet-2')).toBeVisible();
+  await expect(page.locator('#sheet-1')).toBeHidden();
+  await page.getByRole('button', { name: '02 目もと・鼻・口・ヒゲ' }).press('ArrowRight');
+  await expect(page.locator('#page-counter')).toHaveText('3 / 4');
+  await page.getByRole('button', { name: '次のページ →' }).click();
+  await expect(page.locator('#page-counter')).toHaveText('4 / 4');
+  await expect(page.getByRole('button', { name: '次のページ →' })).toBeDisabled();
+  await page.screenshot({ path: '../outputs/web-page4.png', fullPage: true });
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('#sheet-4 .print-metadata')).toContainText('往復検証');
+  for (let p = 1; p <= 4; p++) await expect(page.locator(`#sheet-${p}`)).toBeVisible();
+  await page.emulateMedia({ media: 'screen' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(await page.locator('#sheet-4 .recipe-grid').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(1);
+  await page.screenshot({ path: '../outputs/web-mobile.png', fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+test('invalid import preserves current data; local image sends no network requests', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#import').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{') });
+  await expect(page.getByRole('alert')).toContainText('JSONを読み取れません');
+  await expect(page.locator('[data-id="p1.c1.r1"] .value')).toHaveText('—');
+  const requests: string[] = [];
+  page.on('request', req => { if (!req.url().startsWith('blob:')) requests.push(req.url()); });
+  // Synthetic PNG fixture, not a user photo.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jf1sAAAAASUVORK5CYII=', 'base64');
+  await page.locator('#image').setInputFiles({ name: 'pixel.png', mimeType: 'image/png', buffer: png });
+  await expect(page.locator('#reference-preview')).toBeVisible();
+  await expect(page.locator('#message')).toContainText('推定はまだ行っていません');
+  await expect(page.locator('#summary')).toContainText('0 /');
+  expect(requests).toEqual([]);
+  await page.getByRole('button', { name: '画像を外す' }).click();
+  await expect(page.locator('#reference-preview')).toBeHidden();
+});
