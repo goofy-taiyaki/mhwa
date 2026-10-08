@@ -4,6 +4,8 @@ import type { LayoutRow } from './layout.ts';
 import { emptyRecipe, inferenceLabel, ORIGIN_LABEL, parseRecipe, serializeRecipe, updateValue } from './recipe.ts';
 import type { Entry, Recipe } from './recipe.ts';
 import { inferImage } from './inference-client.ts';
+import { createCropEditor } from './image-crop.ts';
+import type { CropRect } from './image-crop.ts';
 
 function element<T extends HTMLElement>(id: string): T {
   const found = document.getElementById(id);
@@ -23,6 +25,7 @@ let imageUrl: string | null = null;
 let imageRequest = 0;
 let dirty = false;
 let selectedImage: HTMLImageElement | null = null;
+let activeCrop: CropRect | null = null;
 let inferenceAbort: AbortController | null = null;
 let inferenceSequence = 0;
 let generatedFromImageRequest: number | null = null;
@@ -30,6 +33,7 @@ const message = element('message');
 
 function inferenceControls(busy: boolean): void {
   element<HTMLButtonElement>('infer').disabled = busy || !selectedImage;
+  element<HTMLButtonElement>('crop-image').disabled = busy || !selectedImage;
   element('cancel-inference').hidden = !busy;
   element('recipe').inert = busy;
   for (const id of ['title', 'game-version', 'base']) element<HTMLInputElement>(id).disabled = busy;
@@ -39,6 +43,27 @@ function cancelInference(): void {
   inferenceSequence++; inferenceAbort?.abort(); inferenceAbort = null;
   inferenceControls(false);
 }
+
+const cropEditor = createCropEditor(rect => {
+  if (!selectedImage) return;
+  const full = rect.x === 0 && rect.y === 0 && rect.width === selectedImage.naturalWidth && rect.height === selectedImage.naturalHeight;
+  const next = full ? null : rect;
+  if (JSON.stringify(activeCrop) === JSON.stringify(next)) return;
+  cancelInference(); activeCrop = next; imageRequest++;
+  const preview = element<HTMLImageElement>('reference-preview');
+  if (full) preview.src = imageUrl!;
+  else {
+    const thumbnail = document.createElement('canvas');
+    const scale = Math.min(1, 320 / rect.width, 320 / rect.height);
+    thumbnail.width = Math.max(1, Math.round(rect.width * scale)); thumbnail.height = Math.max(1, Math.round(rect.height * scale));
+    thumbnail.getContext('2d')!.drawImage(selectedImage, rect.x, rect.y, rect.width, rect.height, 0, 0, thumbnail.width, thumbnail.height);
+    preview.src = thumbnail.toDataURL('image/png');
+  }
+  element('image-info').textContent = `${rect.width} × ${rect.height} px · ${full ? '画像全体' : '切抜き範囲'} · 端末内で表示`;
+  element('inference-status').textContent = '解析範囲を変更しました。「設定候補を作る」で再解析してください。';
+  notify('解析範囲を変更しました。設定表は変更していません。'); renderSheets();
+});
+element('crop-image').addEventListener('click', () => { if (selectedImage && !inferenceAbort) cropEditor.open(selectedImage, activeCrop); });
 
 function notify(text: string, error = false): void {
   message.textContent = text;
@@ -228,7 +253,7 @@ window.addEventListener('afterprint', () => { editing = editingBeforePrint; rend
 element<HTMLInputElement>('image').addEventListener('change', async event => {
   const input = event.target as HTMLInputElement; const file = input.files?.[0];
   if (!file) return;
-  cancelInference(); selectedImage = null; inferenceControls(false);
+  cropEditor.close(); cancelInference(); selectedImage = null; activeCrop = null; inferenceControls(false);
   const request = ++imageRequest;
   element('inference-status').textContent = '画像を読み込んでいます…';
   renderSheets();
@@ -246,6 +271,7 @@ element<HTMLInputElement>('image').addEventListener('change', async event => {
     const preview = element<HTMLImageElement>('reference-preview'); preview.src = imageUrl; preview.hidden = false;
     element('image-info').textContent = `${check.naturalWidth} × ${check.naturalHeight} px · 端末内で表示`;
     element('clear-image').hidden = false;
+    element('crop-image').hidden = false;
     notify('参照画像を表示しました。顔解析・設定値の推定はまだ行っていません。');
     element('inference-status').textContent = '「設定候補を作る」で解析を開始します。';
     renderSheets();
@@ -253,10 +279,11 @@ element<HTMLInputElement>('image').addEventListener('change', async event => {
   finally { if (candidate) URL.revokeObjectURL(candidate); input.value = ''; }
 });
 element('clear-image').addEventListener('click', () => {
-  imageRequest++; selectedImage = null; cancelInference();
+  cropEditor.close(); imageRequest++; selectedImage = null; activeCrop = null; cancelInference();
   if (imageUrl) URL.revokeObjectURL(imageUrl); imageUrl = null;
   const preview = element<HTMLImageElement>('reference-preview'); preview.removeAttribute('src'); preview.hidden = true;
   element('image-info').textContent = '参照画像は未選択'; element('clear-image').hidden = true;
+  element('crop-image').hidden = true;
   notify('参照画像を外しました。');
   element('inference-status').textContent = '画像を選択してください。'; renderSheets();
 });
@@ -264,11 +291,11 @@ element('cancel-inference').addEventListener('click',()=>{cancelInference();elem
 element('infer').addEventListener('click',async()=>{
   if(!selectedImage||inferenceAbort)return;
   if((dirty||Object.values(recipe.entries).some(e=>e.value!==null))&&!window.confirm('現在の設定表を、新しい画像の候補で置き換えますか？ 必要なレシピは先にJSONで保存してください。'))return;
-  const seq=++inferenceSequence,sourceRequest=imageRequest,sourceImage=selectedImage;
+  const seq=++inferenceSequence,sourceRequest=imageRequest,sourceImage=selectedImage,sourceCrop=activeCrop;
   const abort=new AbortController();inferenceAbort=abort;inferenceControls(true);
   const status=element('inference-status');status.textContent='画像を解析用に準備しています…';
   try{
-    const bitmap=await createImageBitmap(sourceImage);
+    const bitmap=sourceCrop ? await createImageBitmap(sourceImage,sourceCrop.x,sourceCrop.y,sourceCrop.width,sourceCrop.height) : await createImageBitmap(sourceImage);
     if(seq!==inferenceSequence){bitmap.close();return;}
     const next=await inferImage(bitmap,new URL('inference/',document.baseURI).href,abort.signal,text=>{if(seq===inferenceSequence)status.textContent=text;});
     if(seq!==inferenceSequence)return;
