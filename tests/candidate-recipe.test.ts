@@ -78,3 +78,22 @@ test('export refuses unmapped settings and cannot silently coerce or clamp selec
   const outOfRange=catalog();outOfRange.candidates[1].settings['口の大きさ']=21;
   assert.throws(()=>createCandidateRecipe(outOfRange,observation(.4),'b'.repeat(64),'2026-10-08T10:00:00Z'),/UI値/);
 });
+
+test('joint nose and eye candidates preserve both values and shared provenance through recipe roundtrip', () => {
+  const joint=catalog();
+  joint.candidates.forEach((c:any,i)=>{c.settings={'鼻の位置':i*20,'目の大きさ':20-i*20}});
+  const recipe=createCandidateRecipe(joint,observation(.4),'b'.repeat(64),'2026-10-08T10:00:00Z');
+  assert.deepEqual(recipe.entries['p2.c2.r9'],{value:20,origin:'candidate',applicability:'unknown'});
+  assert.deepEqual(recipe.entries['p2.c1.r7'],{value:0,origin:'candidate',applicability:'unknown'});
+  assert.equal(Object.values(recipe.entries).filter(e=>e.value===null).length,PARAMETERS.length-2);
+  assert.deepEqual(parseRecipe(serializeRecipe(recipe)),recipe);
+  if(recipe.schemaVersion!==2)throw Error('Missing provenance');
+  assert.deepEqual(recipe.proposal.suggestions.map(s=>s.candidateId),['large','large']);
+  const edited=updateValue(recipe,'p2.c2.r9','10');
+  assert.equal(edited.entries['p2.c1.r7'].origin,'candidate');
+  assert.equal(edited.entries['p2.c2.r9'].origin,'manual');
+  assert.deepEqual(parseRecipe(serializeRecipe(edited)),edited);
+  const forged=structuredClone(recipe);
+  forged.proposal.suggestions[0].rowId='p2.c2.r10';
+  assert.throws(()=>validateRecipe(forged),/UI値/);
+});
