@@ -2,8 +2,10 @@ import { ROW_BY_ID } from './layout.ts';
 
 // UI endpoints and labels observed on build 24705561, not internal parameter IDs.
 // Evidence: docs/NOSE_WIDTH_RANGE_20261008.md and PARTS_CANDIDATE_SEARCH_20261008.md.
+// Nose position: docs/NOSE_POSITION_RESPONSE_20261008.md (UI 0–20).
 export const PROPOSAL_BINDINGS = [
   { id: 'p2.c1.r7', label: '目の大きさ', category: '目もと' },
+  { id: 'p2.c2.r9', label: '鼻の位置', category: '鼻' },
   { id: 'p2.c2.r14', label: '鼻翼の幅', category: '鼻' },
   { id: 'p2.c3.r4', label: '口の大きさ', category: '口' },
 ] as const;
