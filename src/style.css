@@ -26,6 +26,16 @@ h1 { font-weight: 500; font-size: clamp(26px, 3vw, 38px); letter-spacing: .09em;
 .reference p { margin: 2px 0 8px; font-size: 12px; }
 .small { min-height: 30px; padding: 3px 12px; font-size: 12px; }
 .text-button { background: none; border: 0; color: var(--muted); padding: 0 8px; font-size: 12px; min-height: 30px; }
+.crop-dialog { width: min(960px, calc(100% - 24px)); max-height: 92dvh; overflow: auto; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 22px; }
+.crop-dialog::backdrop { background: #000b; }
+.crop-dialog h2 { margin: 0 0 8px; font-size: 20px; font-weight: 500; }
+.crop-dialog p { font-size: 12px; }
+.crop-dialog canvas { display: block; max-width: 100%; height: auto; margin: 16px auto; touch-action: none; cursor: crosshair; }
+.crop-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.crop-fields label { font-size: 12px; color: var(--muted); }
+.crop-fields input { display: block; width: 100%; margin-top: 5px; padding: 8px; color: var(--text); background: var(--value); border: 1px solid var(--line); border-radius: 3px; }
+.crop-note { color: var(--muted); margin-bottom: 0; }
+@media (max-width: 620px) { .crop-dialog { padding: 16px; }.crop-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }.crop-dialog .actions button { flex: 1 1 auto; } }
 .metadata { display: grid; grid-template-columns: 1.4fr 1fr 1.2fr; gap: 18px; align-items: center; }
 .metadata label { font-size: 11px; color: var(--muted); }
 .metadata input { display: block; width: 100%; margin-top: 7px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; padding: 6px 0; color: var(--text); font-size: 13px; }
