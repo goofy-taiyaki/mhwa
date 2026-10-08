@@ -1,0 +1,7 @@
+node_modules/
+public/inference/
+dist/
+test-results/
+playwright-report/
+.env
+.env.*

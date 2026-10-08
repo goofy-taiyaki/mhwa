@@ -1,2 +1,37 @@
-# mhwa
-参照画像からMonster Hunter Wildsの口・目の設定候補とレシピを作る非公式実験サイト。画像は端末内で解析。
+# MHWA — ハンターのレシピ
+
+Monster Hunter Wildsの参照画像から口・目の大きさの候補を提案し、4ページの設定表・JSON・印刷にまとめる非公式の実験サイトです。
+
+## 現在の範囲
+
+- プリセット1を基準に、口・目の大きさを各0・10・20から選択します。
+- 測定対象はSteam build 24705561 / EXE 1.42.0.2。単一環境のゲーム画面による初期実験です。
+- 実写での再現精度、他の基準顔・ゲーム版は未検証です。測定した組合せでも誤判定があります。
+- 未対応欄は空欄です。基準顔を再現する完全なレシピではありません。手動編集・JSON保存/読込ができます。
+- 画像は端末内で解析します。画像・顔の特徴点は送信せずJSONにも含めません。Workerは同じサイトへのGETだけを許可し、SDKの診断ログ送信を遮断します。
+
+## 開発
+
+Node.js 24以降を使用します。
+
+```sh
+npm ci
+node --experimental-strip-types scripts/prepare-public-assets.mjs
+npm test
+npm run build
+npm run dev
+```
+
+モデルは公式配布元から取得してSHA-256を照合します。`public/inference/`、`dist/`は生成物でありGitに登録しません。実機画像・セーブ・ゲーム抽出資産・個人画像はこのリポジトリに含めません。`catalogs/experimental.json`は口・目の測定特徴の平均値と条件だけを保持し、画像や個別の顔特徴点を含みません。
+
+`npm run test:e2e` はPlaywright Chromiumを使います。初回は `npx playwright install chromium` を実行します。私有画像を必要としないUI・失敗処理の検証です。画像への再現精度を保証するテストではありません。
+
+## GitHub Pages
+
+Settings → Pages → SourceをGitHub Actionsに設定します。mainへのpushで単体・型・ビルド・E2Eを実行し、合格したdistのみを配信します。ロールバックは既知の正常コミットを復元し、同じ検証と配信を再実行します。
+
+## ライセンス・問い合わせ
+
+MediaPipe Tasks Vision 1.1.0とFace Landmarkerモデル群はApache License 2.0です。詳細とライセンス本文は `public/third-party.html`、`public/licenses/Apache-2.0.txt` に同梱しています。
+
+本サイトはカプコンと提携・承認関係にありません。問い合わせはリポジトリのIssuesへ。個人画像やセーブなどを公開投稿しないでください。

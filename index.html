@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="description" content="Monster Hunter Wildsのキャラメイク設定を整理する、ローカル処理のレシピノート。" />
+  <title>MHWA — ハンターのレシピ</title>
+</head>
+<body>
+  <a class="skip-link" href="#recipe">レシピへ移動</a>
+  <header class="topbar"><a class="brand" href="./">MHWA<span>HUNTER RECIPE</span></a><span class="stage">開発プレビュー</span></header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">MONSTER HUNTER WILDS / CHARACTER RECIPE</p><h1>ハンターのレシピ</h1><p class="lead">設定を見渡す。ひとつずつ、理想の顔へ。</p></div>
+      <div class="actions"><label class="button secondary">JSONを開く<input id="import" type="file" accept=".json,application/json" /></label><button id="export">JSONを保存</button><button id="print" class="secondary">印刷</button></div>
+    </section>
+    <section class="input-panel" aria-label="参照画像とレシピ情報">
+      <div class="reference"><img id="reference-preview" alt="選択した参照画像" hidden /><div><span class="eyebrow">REFERENCE</span><p id="image-info">参照画像は未選択</p><label class="button secondary small">画像を選ぶ<input id="image" type="file" accept="image/jpeg,image/png,image/webp" /></label><button id="clear-image" class="text-button" hidden>画像を外す</button></div></div>
+      <div class="metadata"><label>レシピ名<input id="title" type="text" maxlength="160" value="新しいレシピ" /></label><label>ゲーム版<input id="game-version" type="text" maxlength="160" placeholder="未確認" /></label><label>ベース設定<input id="base" type="text" maxlength="160" placeholder="未指定" /></label></div>
+      <div class="inference-panel"><div><button id="infer" disabled>設定候補を作る</button><button id="cancel-inference" class="secondary" hidden>解析を中止</button></div><p id="inference-status" role="status" aria-live="polite">画像を選択してください。</p><p class="inference-scope">実験版：プリセット1を基準に、口・目の大きさを0・10・20から提案します。正面・無表情で顔全体が見える1人の画像を選んでください。実写での再現精度、顔の向き・遮蔽の自動判定は未検証です。</p></div>
+      <p class="privacy">画像は端末内で解析し、サーバーへ送信しません。初回解析時に解析用データを読み込みます。JSONに画像や顔の特徴点は含まれません。</p>
+    </section>
+    <div id="message" role="status" aria-live="polite"></div>
+    <section id="proposal-details" class="proposal-details" aria-label="候補レシピの条件" hidden></section>
+    <section id="recipe" tabindex="-1" aria-label="ハンター設定レシピ">
+      <div class="recipe-toolbar"><div><span class="eyebrow">RECIPE SHEET</span><p id="summary"></p></div><label class="edit-toggle"><input id="editing" type="checkbox" />手動編集</label></div>
+      <p class="notice">配列確認版 · 値は未取得から開始します。入力値のゲーム内範囲・再現性は未検証です。</p>
+      <nav id="tabs" aria-label="レシピのページ"></nav>
+      <div id="sheets"></div>
+      <div class="pager"><button id="previous" class="secondary">← 前のページ</button><span id="page-counter" aria-live="polite"></span><button id="next" class="secondary">次のページ →</button></div>
+    </section>
+    <footer><span>MHWA / 非公式キャラクターメイク支援</span><a href="./third-party.html">ライセンスと画像の扱い</a><span>未取得は「—」。0・OFFとは区別します。</span></footer>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
