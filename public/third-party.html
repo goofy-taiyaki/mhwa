@@ -1,0 +1,9 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MHWA — ライセンスと画像の扱い</title>
+<body><main><h1>ライセンスと画像の扱い</h1><p><a href="./">設定レシピに戻る</a></p>
+<h2>画像の扱い</h2><p>画像はブラウザー内で解析します。画像・顔の特徴点をサーバーへ送信せず、保存するJSONにも含めません。解析用Workerは同じサイトからのデータ取得だけを許可し、MediaPipeの診断ログ送信も遮断しています。サイト閲覧や解析データ取得の通常のアクセス情報はホスティング事業者に届きます。</p>
+<h2>対応と制限</h2><p>実験版です。Steam build 24705561 / EXE 1.42.0.2の単一基準顔を使い、口・目の大きさを0・10・20から提案します。実写での再現精度、他の基準顔、他のゲーム版は未検証です。完全な基準レシピは含みません。未取得の項目は手動で確認してください。</p>
+<h2>MediaPipe</h2><p>MediaPipe Tasks Vision 1.1.0 / The MediaPipe Authors。Face Landmarkerのモデル群（BlazeFace short-range、FaceMesh V2、Blendshape V2）/ Google。Apache License 2.0に基づき使用しています。モデルとWASMファイルは改変せず、SDKのJavaScriptをアプリケーションにバンドルしています。MHWA側の通信制限は独自の組み込み処理です。</p>
+<p><a href="licenses/Apache-2.0.txt">Apache License 2.0 本文</a> · <a href="https://github.com/google-ai-edge/mediapipe">MediaPipeソース</a> · <a href="https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker">公式ガイド・モデルカード</a> · <a href="https://developers.google.com/edge/mediapipe/solutions/tasks#mediapipe-tasks-privacy-notice">MediaPipeのプライバシー説明</a></p>
+<h2>非公式サイト</h2><p>Monster Hunter Wildsの非公式キャラクターメイク支援サイトです。カプコンとの提携・承認を示すものではありません。ゲーム画像、ゲーム本体、セーブ、ゲームから抽出した資産は配布していません。</p>
+<p><a href="https://github.com/goofy-taiyaki/mhwa/issues">不具合の報告</a>（公開されるため、個人画像やセーブを添付しないでください。）</p>
+</main></body></html>
